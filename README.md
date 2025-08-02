@@ -64,7 +64,7 @@ portfolio add --symbol <SYMBOL> --platform <PLATFORM> --amount <AMOUNT> --qty <Q
 
 **Arguments:**
 - `--symbol`: Investment symbol (e.g., BTCUSD, ETHUSD, AAPL, QQQM)
-- `--platform`: Trading platform (binance, okx, coinbase, fidelity)
+- `--platform`: Trading platform (binance, okx, coinbase, stock_etf)
 - `--amount`: Amount spent in USD
 - `--qty`: Quantity purchased
 
@@ -162,7 +162,7 @@ portfolio delete --id abc12345 --force
 | **Binance** | Crypto | BTCUSD, ETHUSD, BNBUSD, etc. | Binance.US API |
 | **OKX** | Crypto | BTC-USD, ETH-USD, etc. | OKX Exchange API |
 | **Coinbase** | Crypto | BTC-USD, ETH-USD, etc. | Coinbase API |
-| **Fidelity** | Stocks/ETFs | AAPL, QQQM, SPY, etc. | Via Stooq data |
+| **Stock_ETF** | Stocks/ETFs | AAPL, QQQM, SPY, etc. | Via Stooq data |
 
 ## 📊 Data Storage
 
