@@ -3,7 +3,7 @@ Setup script for Portfolio Tracker CLI Tool
 """
 from setuptools import setup, find_packages
 
-with open("README_CLI.md", "r", encoding="utf-8") as fh:
+with open("docs/README_CLI.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 setup(
