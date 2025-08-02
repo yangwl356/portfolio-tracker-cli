@@ -42,14 +42,14 @@ class PortfolioError(Exception):
     """Custom exception for portfolio operations"""
     pass
 
-# ========= 资产分类助手 =========
+# ========= Asset Classification Helper =========
 def classify_asset(symbol: str) -> str:
-    """简易分类函数：以 "USD" 结尾的交易对视为加密货币 (crypto)，其余默认归为股票 / ETF (stock)"""
+    """Simple classification function: Trading pairs ending with "USD" are considered crypto, others default to stock/ETF"""
     return "crypto" if symbol.upper().endswith("USD") else "stock"
 
-# ========= 价格抓取 =========
+# ========= Price Fetching =========
 class PriceFetcher:
-    """按平台抓实时价格（USD 计价）"""
+    """Fetch real-time prices by platform (USD denominated)"""
 
     BINANCE_URL = "https://api.binance.us/api/v3/ticker/price"
     OKX_URL = "https://www.okx.com/api/v5/market/ticker"
@@ -58,7 +58,7 @@ class PriceFetcher:
 
     @staticmethod
     def stooq(symbol: str) -> float:
-        """支持任意美股 / ETF（例如 QQQM、AAPL）"""
+        """Supports any US stocks/ETFs (e.g., QQQM, AAPL)"""
         ticker = symbol.lower()
         if "." not in ticker:
             ticker += ".us"
@@ -97,10 +97,10 @@ class PriceFetcher:
         "binance": binance.__func__,
         "okx": okx.__func__,
         "coinbase": coinbase.__func__,
-        "fidelity": stooq.__func__,
+        "stock_etf": stooq.__func__,
     }
 
-# ========= 数据管理 =========
+# ========= Data Management =========
 class PortfolioData:
     """Portfolio data management with unique transaction IDs"""
     
@@ -205,7 +205,7 @@ class PortfolioData:
         df['timestamp'] = pd.to_datetime(df['timestamp'])
         return df
 
-# ========= 报表生成 =========
+# ========= Report Generation =========
 class PortfolioReporter:
     """Generate beautiful portfolio reports"""
     
@@ -219,7 +219,7 @@ class PortfolioReporter:
         if df.empty:
             return pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
         
-        # ① 计算平台 × 币种的加权平均成本
+        # ① Calculate weighted average cost by platform × symbol
         df["cost_per_unit"] = df["amount"] / df["qty"]
         grouped = (
             df.groupby(["platform", "symbol"])
@@ -228,7 +228,7 @@ class PortfolioReporter:
         )
         grouped["avg_cost"] = grouped["total_cost"] / grouped["total_qty"]
         
-        # ② 拉取当前价格并计算 PnL
+        # ② Fetch current prices and calculate PnL
         current_prices = {}
         for _, row in grouped.iterrows():
             platform, symbol = row["platform"], row["symbol"]
@@ -248,7 +248,7 @@ class PortfolioReporter:
         grouped["pnl_$"] = grouped["market_value"] - grouped["total_cost"]
         grouped["pnl_%"] = grouped["pnl_$"] / grouped["total_cost"] * 100
         
-        # ③ 各币种（跨平台）平均成本
+        # ③ Average cost per symbol (cross-platform)
         coin_lvl = (
             df.groupby("symbol")
             .agg(total_qty=("qty", "sum"), total_cost=("amount", "sum"))
@@ -256,7 +256,7 @@ class PortfolioReporter:
         )
         coin_lvl["avg_cost_all_platform"] = coin_lvl["total_cost"] / coin_lvl["total_qty"]
         
-        # ④ 资产大类（Crypto vs Stock）汇总收益
+        # ④ Asset class (Crypto vs Stock) summary returns
         grouped["asset_class"] = grouped["symbol"].apply(classify_asset)
         asset_summary = (
             grouped.groupby("asset_class")
@@ -380,7 +380,7 @@ class PortfolioReporter:
         
         console.print(table)
 
-# ========= CLI 命令 =========
+# ========= CLI Commands =========
 def add_transaction(args):
     """Add a new transaction"""
     try:

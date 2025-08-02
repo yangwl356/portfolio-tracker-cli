@@ -9,12 +9,12 @@ with open("README_CLI.md", "r", encoding="utf-8") as fh:
 setup(
     name="portfolio-tracker-cli",
     version="1.0.0",
-    author="Your Name",
-    author_email="your.email@example.com",
+    author="Yangwl356",
+    author_email="yangwl356@proton.me",
     description="A professional command-line tool for tracking crypto and stock investments",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/yourusername/portfolio-tracker-cli",
+    url="https://github.com/yangwl356/portfolio-tracker-cli",
     packages=find_packages(),
     classifiers=[
         "Development Status :: 4 - Beta",
@@ -43,8 +43,8 @@ setup(
     },
     keywords="portfolio, crypto, stocks, investment, tracking, cli, finance",
     project_urls={
-        "Bug Reports": "https://github.com/yourusername/portfolio-tracker-cli/issues",
-        "Source": "https://github.com/yourusername/portfolio-tracker-cli",
-        "Documentation": "https://github.com/yourusername/portfolio-tracker-cli#readme",
+        "Bug Reports": "https://github.com/yangwl356/portfolio-tracker-cli/issues",
+        "Source": "https://github.com/yangwl356/portfolio-tracker-cli",
+        "Documentation": "https://github.com/yangwl356/portfolio-tracker-cli#readme",
     },
 ) 

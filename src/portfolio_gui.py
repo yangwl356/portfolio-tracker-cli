@@ -17,14 +17,14 @@ import requests
 
 DATA_FILE = Path("transactions.csv")
 
-# ========= 资产分类助手 =========
+# ========= Asset Classification Helper =========
 def classify_asset(symbol: str) -> str:
-    """简易分类函数：以 "USD" 结尾的交易对视为加密货币 (crypto)，其余默认归为股票 / ETF (stock)"""
+    """Simple classification function: Trading pairs ending with "USD" are considered crypto, others default to stock/ETF"""
     return "crypto" if symbol.upper().endswith("USD") else "stock"
 
-# ========= 价格抓取 =========
+# ========= Price Fetching =========
 class PriceFetcher:
-    """按平台抓实时价格（USD 计价）"""
+    """Fetch real-time prices by platform (USD denominated)"""
 
     BINANCE_URL = "https://api.binance.us/api/v3/ticker/price"
     OKX_URL = "https://www.okx.com/api/v5/market/ticker"
@@ -33,7 +33,7 @@ class PriceFetcher:
 
     @staticmethod
     def stooq(symbol: str) -> float:
-        """支持任意美股 / ETF（例如 QQQM、AAPL）"""
+        """Supports any US stocks/ETFs (e.g., QQQM, AAPL)"""
         ticker = symbol.lower()
         if "." not in ticker:
             ticker += ".us"
@@ -75,9 +75,9 @@ class PriceFetcher:
         "fidelity": stooq.__func__,
     }
 
-# ========= 数据文件读写 =========
+# ========= Data File I/O =========
 def append_tx(symbol, platform, amount, qty):
-    """追加一行交易记录到 CSV"""
+    """Append a transaction record to CSV"""
     DATA_FILE.touch(exist_ok=True)
     with DATA_FILE.open("a", newline="") as f:
         writer = csv.writer(f)
@@ -99,11 +99,11 @@ def read_tx() -> pd.DataFrame:
     )
 
 def save_tx(df: pd.DataFrame):
-    """保存交易数据到 CSV"""
+    """Save transaction data to CSV"""
     df.to_csv(DATA_FILE, index=False, header=False)
 
 def delete_tx(index: int):
-    """删除指定索引的交易"""
+    """Delete transaction at specified index"""
     df = read_tx()
     if 0 <= index < len(df):
         df = df.drop(index).reset_index(drop=True)
@@ -112,7 +112,7 @@ def delete_tx(index: int):
     return False
 
 def update_tx(index: int, symbol: str, platform: str, amount: float, qty: float):
-    """更新指定索引的交易"""
+    """Update transaction at specified index"""
     df = read_tx()
     if 0 <= index < len(df):
         df.loc[index, 'symbol'] = symbol.upper()
@@ -123,13 +123,13 @@ def update_tx(index: int, symbol: str, platform: str, amount: float, qty: float)
         return True
     return False
 
-# ========= 报表逻辑 =========
+# ========= Report Logic =========
 def build_portfolio_data(df: pd.DataFrame):
-    """生成投资组合数据"""
+    """Generate portfolio data"""
     if df.empty:
         return None, None, None
 
-    # ① 计算平台 × 币种的加权平均成本
+    # 1. Calculate weighted average cost by platform × symbol
     df["cost_per_unit"] = df["amount"] / df["qty"]
     grouped = (
         df.groupby(["platform", "symbol"])
@@ -138,7 +138,7 @@ def build_portfolio_data(df: pd.DataFrame):
     )
     grouped["avg_cost"] = grouped["total_cost"] / grouped["total_qty"]
 
-    # ② 拉取当前价格并计算 PnL
+    # 2. Fetch current prices and calculate PnL
     current_prices = {}
     for _, row in grouped.iterrows():
         platform, symbol = row["platform"], row["symbol"]
@@ -157,7 +157,7 @@ def build_portfolio_data(df: pd.DataFrame):
     grouped["pnl_$"] = grouped["market_value"] - grouped["total_cost"]
     grouped["pnl_%"] = grouped["pnl_$"] / grouped["total_cost"] * 100
 
-    # ③ 各币种（跨平台）平均成本
+    # 3. Average cost by symbol (cross-platform)
     coin_lvl = (
         df.groupby("symbol")
         .agg(total_qty=("qty", "sum"), total_cost=("amount", "sum"))
@@ -165,7 +165,7 @@ def build_portfolio_data(df: pd.DataFrame):
     )
     coin_lvl["avg_cost_all_platform"] = coin_lvl["total_cost"] / coin_lvl["total_qty"]
 
-    # ④ 资产大类（Crypto vs Stock）汇总收益
+    # 4. Asset class (Crypto vs Stock) summary returns
     grouped["asset_class"] = grouped["symbol"].apply(classify_asset)
     asset_summary = (
         grouped.groupby("asset_class")
@@ -177,12 +177,12 @@ def build_portfolio_data(df: pd.DataFrame):
 
     return grouped, coin_lvl, asset_summary
 
-# ========= 交易编辑对话框 =========
+# ========= Transaction Edit Dialog =========
 class TransactionDialog:
     def __init__(self, parent, title, transaction_data=None):
         self.result = None
         
-        # 创建对话框
+        # Create dialog
         self.dialog = tk.Toplevel(parent)
         self.dialog.title(title)
         self.dialog.geometry("450x350")
@@ -190,16 +190,16 @@ class TransactionDialog:
         self.dialog.transient(parent)
         self.dialog.grab_set()
         
-        # 居中显示
+        # Center display
         self.dialog.geometry("+%d+%d" % (parent.winfo_rootx() + 50, parent.winfo_rooty() + 50))
         
-        # 创建变量
+        # Create variables
         self.symbol_var = tk.StringVar()
         self.platform_var = tk.StringVar()
         self.amount_var = tk.StringVar()
         self.qty_var = tk.StringVar()
         
-        # 如果有现有数据，填充它
+        # If existing data, populate it
         if transaction_data:
             self.symbol_var.set(transaction_data.get('symbol', ''))
             self.platform_var.set(transaction_data.get('platform', ''))
@@ -208,19 +208,19 @@ class TransactionDialog:
         
         self.create_widgets()
         
-        # 等待对话框关闭
+        # Wait for dialog to close
         self.dialog.wait_window()
     
     def create_widgets(self):
-        # 主框架
+        # Main frame
         main_frame = ttk.Frame(self.dialog, padding="25")
         main_frame.pack(fill=tk.BOTH, expand=True)
         
-        # 标题
-        title_label = ttk.Label(main_frame, text="交易信息", font=("Helvetica", 16, "bold"))
+        # Title
+        title_label = ttk.Label(main_frame, text="Transaction Details", font=("Helvetica", 16, "bold"))
         title_label.pack(pady=(0, 25))
         
-        # 输入字段
+        # Input fields
         fields_frame = ttk.Frame(main_frame)
         fields_frame.pack(fill=tk.BOTH, expand=True)
         
@@ -246,19 +246,19 @@ class TransactionDialog:
         qty_entry = ttk.Entry(fields_frame, textvariable=self.qty_var, font=("Helvetica", 11))
         qty_entry.pack(fill=tk.X, pady=(0, 25))
         
-        # 按钮框架
+        # Button frame
         button_frame = ttk.Frame(main_frame)
         button_frame.pack(fill=tk.X, pady=(25, 0))
         
-        # 按钮
-        ttk.Button(button_frame, text="保存", command=self.save, style="Accent.TButton").pack(side=tk.RIGHT, padx=(10, 0))
-        ttk.Button(button_frame, text="取消", command=self.cancel).pack(side=tk.RIGHT)
+        # Buttons
+        ttk.Button(button_frame, text="Save", command=self.save, style="Accent.TButton").pack(side=tk.RIGHT, padx=(10, 0))
+        ttk.Button(button_frame, text="Cancel", command=self.cancel).pack(side=tk.RIGHT)
         
-        # 绑定回车键
+        # Bind enter key
         self.dialog.bind('<Return>', lambda e: self.save())
         self.dialog.bind('<Escape>', lambda e: self.cancel())
         
-        # 聚焦到第一个输入框
+        # Focus first input
         symbol_entry.focus()
     
     def save(self):
@@ -269,11 +269,11 @@ class TransactionDialog:
             qty = float(self.qty_var.get())
             
             if not symbol or not platform:
-                messagebox.showerror("错误", "请填写所有字段", parent=self.dialog)
+                messagebox.showerror("Error", "Please fill in all fields", parent=self.dialog)
                 return
             
             if amount <= 0 or qty <= 0:
-                messagebox.showerror("错误", "金额和数量必须大于0", parent=self.dialog)
+                messagebox.showerror("Error", "Amount and quantity must be greater than 0", parent=self.dialog)
                 return
             
             self.result = {
@@ -285,12 +285,12 @@ class TransactionDialog:
             self.dialog.destroy()
             
         except ValueError:
-            messagebox.showerror("错误", "请输入有效的数字", parent=self.dialog)
+            messagebox.showerror("Error", "Please enter valid numbers", parent=self.dialog)
     
     def cancel(self):
         self.dialog.destroy()
 
-# ========= 自定义表格组件 =========
+# ========= Custom Table Widget =========
 class BeautifulTable(ttk.Frame):
     def __init__(self, parent, columns, title="", height=8):
         super().__init__(parent)
@@ -300,19 +300,19 @@ class BeautifulTable(ttk.Frame):
         self.create_widgets()
     
     def create_widgets(self):
-        # 标题
+        # Title
         if self.title:
             title_label = ttk.Label(self, text=self.title, font=("Helvetica", 12, "bold"))
             title_label.pack(anchor=tk.W, pady=(0, 10))
         
-        # 创建表格框架
+        # Create table frame
         table_frame = ttk.Frame(self)
         table_frame.pack(fill=tk.BOTH, expand=True)
         
-        # 创建树形视图
+        # Create treeview
         self.tree = ttk.Treeview(table_frame, columns=self.columns, show="headings", height=self.height)
         
-        # 设置列标题和宽度
+        # Set column headers and widths
         column_widths = {
             "Platform": 80,
             "Symbol": 80,
@@ -336,31 +336,31 @@ class BeautifulTable(ttk.Frame):
             width = column_widths.get(col, 100)
             self.tree.column(col, width=width, minwidth=80)
         
-        # 滚动条
+        # Scrollbar
         scrollbar = ttk.Scrollbar(table_frame, orient=tk.VERTICAL, command=self.tree.yview)
         self.tree.configure(yscrollcommand=scrollbar.set)
         
         self.tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         
-        # 设置交替行颜色
+        # Set alternating row colors
         self.tree.tag_configure('oddrow', background='#F8F9FA')
         self.tree.tag_configure('evenrow', background='#FFFFFF')
         self.tree.tag_configure('positive', foreground='#28A745')
         self.tree.tag_configure('negative', foreground='#DC3545')
     
     def clear(self):
-        """清空表格"""
+        """Clear table"""
         for item in self.tree.get_children():
             self.tree.delete(item)
     
     def add_data(self, data_list):
-        """添加数据到表格"""
+        """Add data to table"""
         self.clear()
         for i, row_data in enumerate(data_list):
             tags = ('evenrow' if i % 2 == 0 else 'oddrow',)
             
-            # 为PnL添加颜色标签
+            # Add color tags for PnL
             if len(row_data) > 7 and isinstance(row_data[7], (int, float)):
                 if row_data[7] > 0:
                     tags += ('positive',)
@@ -369,7 +369,7 @@ class BeautifulTable(ttk.Frame):
             
             self.tree.insert('', 'end', values=row_data, tags=tags)
 
-# ========= GUI 应用 =========
+# ========= GUI Application =========
 class PortfolioApp:
     def __init__(self, root):
         self.root = root
@@ -377,14 +377,14 @@ class PortfolioApp:
         self.root.geometry("1200x800")
         self.root.minsize(1000, 700)
         
-        # 设置样式
+        # Set styles
         self.setup_styles()
         
-        # 创建主框架
+        # Create main frame
         self.main_frame = ttk.Frame(root)
         self.main_frame.pack(fill=tk.BOTH, expand=True, padx=15, pady=15)
         
-        # 配置网格权重
+        # Configure grid weights
         self.main_frame.columnconfigure(0, weight=1)
         self.main_frame.rowconfigure(1, weight=1)
         
@@ -392,55 +392,55 @@ class PortfolioApp:
         self.refresh_data()
 
     def setup_styles(self):
-        """设置自定义样式"""
+        """Set custom styles"""
         style = ttk.Style()
         style.theme_use('clam')
         
-        # 定义颜色
+        # Define colors
         primary_color = "#007AFF"
         success_color = "#34C759"
         warning_color = "#FF9500"
         danger_color = "#FF3B30"
         
-        # 标题样式
+        # Title style
         style.configure("Title.TLabel", font=("Helvetica", 24, "bold"), foreground=primary_color)
         
-        # 强调按钮样式
+        # Accent button style
         style.configure("Accent.TButton", 
                        background=primary_color, 
                        foreground="white",
                        font=("Helvetica", 11, "bold"))
         
-        # 成功按钮样式
+        # Success button style
         style.configure("Success.TButton",
                        background=success_color,
                        foreground="white",
                        font=("Helvetica", 11, "bold"))
         
-        # 危险按钮样式
+        # Danger button style
         style.configure("Danger.TButton",
                        background=danger_color,
                        foreground="white",
                        font=("Helvetica", 11, "bold"))
 
     def create_widgets(self):
-        # 标题
+        # Title
         title_label = ttk.Label(self.main_frame, text="📊 Portfolio Tracker", style="Title.TLabel")
         title_label.grid(row=0, column=0, columnspan=2, pady=(0, 25))
 
-        # 左侧面板 - 交易管理
+        # Left panel - Transaction Management
         left_frame = ttk.Frame(self.main_frame)
         left_frame.grid(row=1, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), padx=(0, 15))
         left_frame.columnconfigure(0, weight=1)
         left_frame.rowconfigure(1, weight=1)
 
-        # 添加交易框架
-        add_frame = ttk.LabelFrame(left_frame, text="➕ 添加新交易", padding="20")
+        # Add transaction frame
+        add_frame = ttk.LabelFrame(left_frame, text="➕ Add New Transaction", padding="20")
         add_frame.grid(row=0, column=0, sticky=(tk.W, tk.E), pady=(0, 15))
         add_frame.columnconfigure(1, weight=1)
         add_frame.columnconfigure(3, weight=1)
 
-        # 交易输入字段
+        # Transaction input fields
         ttk.Label(add_frame, text="Symbol:", font=("Helvetica", 11, "bold")).grid(row=0, column=0, sticky=tk.W, padx=(0, 8), pady=8)
         self.symbol_var = tk.StringVar()
         self.symbol_entry = ttk.Entry(add_frame, textvariable=self.symbol_var, font=("Helvetica", 11))
@@ -463,79 +463,79 @@ class PortfolioApp:
         self.qty_entry = ttk.Entry(add_frame, textvariable=self.qty_var, font=("Helvetica", 11))
         self.qty_entry.grid(row=1, column=3, sticky=(tk.W, tk.E), padx=(0, 15), pady=8)
 
-        # 添加按钮
-        add_button = ttk.Button(add_frame, text="➕ 添加交易", command=self.add_transaction, style="Success.TButton")
+        # Add button
+        add_button = ttk.Button(add_frame, text="➕ Add Transaction", command=self.add_transaction, style="Success.TButton")
         add_button.grid(row=2, column=0, columnspan=4, pady=(20, 0))
 
-        # 交易列表框架
-        transactions_frame = ttk.LabelFrame(left_frame, text="📋 交易历史", padding="15")
+        # Transaction list frame
+        transactions_frame = ttk.LabelFrame(left_frame, text="📋 Transaction History", padding="15")
         transactions_frame.grid(row=1, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
         transactions_frame.columnconfigure(0, weight=1)
         transactions_frame.rowconfigure(0, weight=1)
 
-        # 交易列表
+        # Transaction list
         columns = ("Time", "Symbol", "Platform", "Amount", "Quantity")
         self.transactions_tree = ttk.Treeview(transactions_frame, columns=columns, show="headings", height=8)
         
-        # 设置列标题和宽度
+        # Set column headers and widths
         column_widths = {"Time": 120, "Symbol": 80, "Platform": 80, "Amount": 100, "Quantity": 100}
         for col in columns:
             self.transactions_tree.heading(col, text=col)
             self.transactions_tree.column(col, width=column_widths.get(col, 100), minwidth=80)
         
-        # 滚动条
+        # Scrollbar
         transactions_scrollbar = ttk.Scrollbar(transactions_frame, orient=tk.VERTICAL, command=self.transactions_tree.yview)
         self.transactions_tree.configure(yscrollcommand=transactions_scrollbar.set)
         
         self.transactions_tree.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
         transactions_scrollbar.grid(row=0, column=1, sticky=(tk.N, tk.S))
 
-        # 交易操作按钮
+        # Transaction operation buttons
         transactions_buttons_frame = ttk.Frame(transactions_frame)
         transactions_buttons_frame.grid(row=1, column=0, columnspan=2, pady=(15, 0))
         
-        ttk.Button(transactions_buttons_frame, text="✏️ 编辑", command=self.edit_transaction).pack(side=tk.LEFT, padx=(0, 8))
-        ttk.Button(transactions_buttons_frame, text="🗑️ 删除", command=self.delete_transaction, style="Danger.TButton").pack(side=tk.LEFT, padx=(0, 8))
-        ttk.Button(transactions_buttons_frame, text="🔄 刷新", command=self.refresh_data).pack(side=tk.LEFT)
+        ttk.Button(transactions_buttons_frame, text="✏️ Edit", command=self.edit_transaction).pack(side=tk.LEFT, padx=(0, 8))
+        ttk.Button(transactions_buttons_frame, text="🗑️ Delete", command=self.delete_transaction, style="Danger.TButton").pack(side=tk.LEFT, padx=(0, 8))
+        ttk.Button(transactions_buttons_frame, text="🔄 Refresh", command=self.refresh_data).pack(side=tk.LEFT)
 
-        # 右侧面板 - 报表
+        # Right panel - Reports
         right_frame = ttk.Frame(self.main_frame)
         right_frame.grid(row=1, column=1, sticky=(tk.W, tk.E, tk.N, tk.S))
         right_frame.columnconfigure(0, weight=1)
         right_frame.rowconfigure(1, weight=1)
 
-        # 创建报表标签页
+        # Create report tabs
         self.notebook = ttk.Notebook(right_frame)
         self.notebook.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
 
-        # 详细报表标签页
+        # Detailed report tab
         detail_frame = ttk.Frame(self.notebook)
-        self.notebook.add(detail_frame, text="📊 详细报表")
+        self.notebook.add(detail_frame, text="📊 Detailed Report")
         
-        # 平台-币种明细表格
+        # Platform-Symbol detail table
         self.detail_table = BeautifulTable(detail_frame, 
                                           ["Platform", "Symbol", "Total Qty", "Avg Cost", "Live Price", 
                                            "Cost Value", "Market Value", "PnL $", "PnL %"],
-                                          "各平台-币种明细")
+                                          "Platform-Symbol Details")
         self.detail_table.pack(fill=tk.BOTH, expand=True, pady=(0, 15))
 
-        # 币种汇总表格
+        # Symbol summary table
         self.coin_table = BeautifulTable(detail_frame, 
                                         ["Symbol", "Total Qty", "Total Cost", "Avg Cost All"],
-                                        "币种整体平均成本（跨平台合并）")
+                                        "Symbol Overall Average Cost (Cross-Platform)")
         self.coin_table.pack(fill=tk.BOTH, expand=True, pady=(0, 15))
 
-        # 资产大类汇总表格
+        # Asset class summary table
         self.asset_table = BeautifulTable(detail_frame, 
                                          ["Asset Class", "Total Cost", "Market Value", "PnL $", "PnL %"],
-                                         "资产大类汇总收益")
+                                         "Asset Class Summary Returns")
         self.asset_table.pack(fill=tk.BOTH, expand=True)
 
-        # 绑定双击事件
+        # Bind double-click event
         self.transactions_tree.bind("<Double-1>", lambda e: self.edit_transaction())
 
     def add_transaction(self):
-        """添加新交易"""
+        """Add new transaction"""
         try:
             symbol = self.symbol_var.get().strip()
             platform = self.platform_var.get().strip()
@@ -543,40 +543,40 @@ class PortfolioApp:
             qty = float(self.qty_var.get())
 
             if not symbol or not platform:
-                messagebox.showerror("错误", "请填写所有字段")
+                messagebox.showerror("Error", "Please fill in all fields")
                 return
 
             if amount <= 0 or qty <= 0:
-                messagebox.showerror("错误", "金额和数量必须大于0")
+                messagebox.showerror("Error", "Amount and quantity must be greater than 0")
                 return
 
             append_tx(symbol, platform, amount, qty)
             
-            # 清空输入字段
+            # Clear input fields
             self.symbol_var.set("")
             self.platform_var.set("")
             self.amount_var.set("")
             self.qty_var.set("")
             
-            messagebox.showinfo("成功", "✅ 交易已添加！")
+            messagebox.showinfo("Success", "✅ Transaction added!")
             self.refresh_data()
             
         except ValueError:
-            messagebox.showerror("错误", "请输入有效的数字")
+            messagebox.showerror("Error", "Please enter valid numbers")
         except Exception as e:
-            messagebox.showerror("错误", f"添加交易失败: {str(e)}")
+            messagebox.showerror("Error", f"Failed to add transaction: {str(e)}")
 
     def edit_transaction(self):
-        """编辑选中的交易"""
+        """Edit selected transaction"""
         selection = self.transactions_tree.selection()
         if not selection:
-            messagebox.showwarning("警告", "请先选择要编辑的交易")
+            messagebox.showwarning("Warning", "Please select a transaction to edit")
             return
         
         item = self.transactions_tree.item(selection[0])
-        index = int(item['values'][0])  # 第一列是索引
+        index = int(item['values'][0])  # First column is index
         
-        # 获取当前交易数据
+        # Get current transaction data
         df = read_tx()
         if 0 <= index < len(df):
             transaction_data = {
@@ -586,66 +586,66 @@ class PortfolioApp:
                 'qty': df.iloc[index]['qty']
             }
             
-            # 打开编辑对话框
-            dialog = TransactionDialog(self.root, "编辑交易", transaction_data)
+            # Open edit dialog
+            dialog = TransactionDialog(self.root, "Edit Transaction", transaction_data)
             
             if dialog.result:
-                # 更新交易
+                # Update transaction
                 if update_tx(index, dialog.result['symbol'], dialog.result['platform'], 
                            dialog.result['amount'], dialog.result['qty']):
-                    messagebox.showinfo("成功", "✅ 交易已更新！")
+                    messagebox.showinfo("Success", "✅ Transaction updated!")
                     self.refresh_data()
                 else:
-                    messagebox.showerror("错误", "更新交易失败")
+                    messagebox.showerror("Error", "Failed to update transaction")
 
     def delete_transaction(self):
-        """删除选中的交易"""
+        """Delete selected transaction"""
         selection = self.transactions_tree.selection()
         if not selection:
-            messagebox.showwarning("警告", "请先选择要删除的交易")
+            messagebox.showwarning("Warning", "Please select a transaction to delete")
             return
         
-        if messagebox.askyesno("确认删除", "确定要删除选中的交易吗？"):
+        if messagebox.askyesno("Confirm Delete", "Are you sure you want to delete the selected transaction?"):
             item = self.transactions_tree.item(selection[0])
-            index = int(item['values'][0])  # 第一列是索引
+            index = int(item['values'][0])  # First column is index
             
             if delete_tx(index):
-                messagebox.showinfo("成功", "✅ 交易已删除！")
+                messagebox.showinfo("Success", "✅ Transaction deleted!")
                 self.refresh_data()
             else:
-                messagebox.showerror("错误", "删除交易失败")
+                messagebox.showerror("Error", "Failed to delete transaction")
 
     def refresh_data(self):
-        """刷新数据和报表"""
+        """Refresh data and reports"""
         def update_data():
             try:
                 df = read_tx()
                 
-                # 更新交易列表
+                # Update transaction list
                 self.root.after(0, lambda: self.update_transactions_list(df))
                 
-                # 更新报表表格
+                # Update report tables
                 portfolio_data = build_portfolio_data(df)
                 self.root.after(0, lambda: self.update_portfolio_tables(portfolio_data))
                 
             except Exception as e:
-                error_msg = f"刷新数据失败: {str(e)}"
-                self.root.after(0, lambda: messagebox.showerror("错误", error_msg))
+                error_msg = f"Failed to refresh data: {str(e)}"
+                self.root.after(0, lambda: messagebox.showerror("Error", error_msg))
 
-        # 在后台线程中执行
+        # Execute in background thread
         threading.Thread(target=update_data, daemon=True).start()
 
     def update_transactions_list(self, df):
-        """更新交易列表显示"""
-        # 清空现有项目
+        """Update transaction list display"""
+        # Clear existing items
         for item in self.transactions_tree.get_children():
             self.transactions_tree.delete(item)
         
-        # 添加交易数据
+        # Add transaction data
         for index, row in df.iterrows():
             time_str = row['time'].strftime('%Y-%m-%d %H:%M') if pd.notna(row['time']) else 'N/A'
             self.transactions_tree.insert('', 'end', values=(
-                index,  # 索引
+                index,  # Index
                 time_str,
                 row['symbol'],
                 row['platform'],
@@ -654,8 +654,8 @@ class PortfolioApp:
             ))
 
     def update_portfolio_tables(self, portfolio_data):
-        """更新投资组合表格"""
-        if portfolio_data[0] is None:  # 没有数据
+        """Update portfolio tables"""
+        if portfolio_data[0] is None:  # No data
             self.detail_table.add_data([])
             self.coin_table.add_data([])
             self.asset_table.add_data([])
