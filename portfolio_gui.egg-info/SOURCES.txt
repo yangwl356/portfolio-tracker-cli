@@ -1,5 +1,0 @@
-setup.py
-portfolio_gui.egg-info/PKG-INFO
-portfolio_gui.egg-info/SOURCES.txt
-portfolio_gui.egg-info/dependency_links.txt
-portfolio_gui.egg-info/top_level.txt
