@@ -208,25 +208,6 @@ The tool automatically creates necessary files in your current directory:
 - `portfolio_data.json`: Your portfolio data
 - `portfolio_config.json`: Configuration settings (future use)
 
-## 🚀 Publishing to PyPI
-
-To publish this tool to PyPI:
-
-1. **Update setup_cli.py**:
-   - Change author information
-   - Update GitHub repository URL
-   - Modify package name if needed
-
-2. **Build and upload**:
-   ```bash
-   python setup_cli.py sdist bdist_wheel
-   twine upload dist/*
-   ```
-
-3. **Install globally**:
-   ```bash
-   pip install portfolio-tracker-cli
-   ```
 
 ## 🤝 Contributing
 
@@ -246,7 +227,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 If you encounter any issues or have questions:
 
-1. Check the [GitHub Issues](https://github.com/yourusername/portfolio-tracker-cli/issues)
+1. Check the [GitHub Issues](https://github.com/yangwl356/portfolio-tracker-cli/issues)
 2. Create a new issue with detailed information
 3. Include your operating system and Python version
 
