@@ -1,0 +1,2 @@
+[console_scripts]
+portfolio = portfolio_tracker_cli.portfolio_cli:main

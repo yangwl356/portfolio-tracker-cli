@@ -3,7 +3,7 @@ Setup script for Portfolio Tracker CLI Tool
 """
 from setuptools import setup, find_packages
 
-with open("docs/README_CLI.md", "r", encoding="utf-8") as fh:
+with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 setup(
@@ -38,7 +38,7 @@ setup(
     ],
     entry_points={
         "console_scripts": [
-            "portfolio=portfolio_cli:main",
+            "portfolio=portfolio_tracker_cli.portfolio_cli:main",
         ],
     },
     keywords="portfolio, crypto, stocks, investment, tracking, cli, finance",
